@@ -16,9 +16,22 @@ RUN apt update && apt install -y \
     pkg-config \
     && conda install -c conda-forge pybind11
 
-RUN conda create -n pogema python=3.10 -y \
-    && conda run -n pogema pip install --no-cache-dir -r /tmp/requirements.txt \
-    && conda run -n pogema pip install --no-cache-dir importlib-metadata==4.13.0 --force-reinstall
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# quiet conda + no prompts
+RUN conda config --system --set always_yes true \
+ && conda config --system --set changeps1 false
+
+# upgrade cmake (and ninja) in *base* so /opt/conda/bin/cmake is new enough
+RUN conda install -n base -c conda-forge "cmake>=3.29" "ninja" \
+ && cmake --version
+
+RUN conda create -q -n pogema python=3.10 \
+ && conda run -n pogema python -V \
+ && conda run -n pogema pip install --no-cache-dir -r /tmp/requirements.txt \
+ && conda run -n pogema pip install --no-cache-dir importlib-metadata==4.13.0 --force-reinstall \
+ && conda clean -afy
 
 RUN wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz \
     && tar -xzf eigen-3.3.9.tar.gz \
